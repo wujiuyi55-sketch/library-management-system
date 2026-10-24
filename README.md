@@ -8,6 +8,7 @@
 ![MyBatis](https://img.shields.io/badge/MyBatis-2.3.1-blue)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1)
 ![License](https://img.shields.io/badge/License-MIT-green)
+![build](https://github.com/wujiuyi55-sketch/library-management-system/actions/workflows/maven.yml/badge.svg)
 
 > 演示环境默认使用 H2（MySQL 兼容模式），**不需要装数据库**；生产环境切换 `mysql` profile 即可。
 
@@ -31,7 +32,7 @@
 - **Java 17** / Spring Boot 2.7.18
 - **MyBatis 2.3.1**：简单 CRUD 用注解，动态检索与联表统计写在 XML
 - **MySQL 8.0**（生产）/ **H2**（演示、单元测试）
-- Maven、Lombok、JUnit 5 + AssertJ
+- Maven、Lombok、JUnit 5 + AssertJ + MockMvc
 - 原生 HTML + CSS + JavaScript 演示页（不引入前端框架，零构建）
 
 ## 快速开始
@@ -159,7 +160,9 @@ Service 层再把没有借阅记录的月份补 0，前端画图 X 轴才连续�
 mvn test
 ```
 
-9 个用例覆盖核心链路（H2 内存库，测试事务自动回滚）：
+15 个用例（H2 内存库，测试事务自动回滚），分两层：
+
+**业务层 9 个**（`BorrowServiceTest`）
 
 - 借书成功：库存减一、生成 30 天借期记录
 - 库存为 0 时借书失败，库存不会被扣成负数
@@ -168,6 +171,17 @@ mvn test
 - 超期归还：按天计算超期天数与罚金
 - 重复归还失败，库存不会被加两次
 - 超期扫描任务把过期记录标记为 `OVERDUE`
+
+**接口层 6 个**（`ApiIntegrationTest`，MockMvc）
+
+- 检索返回统一响应体与分页结构
+- 借书返回 201 与在借记录
+- 重复借阅返回 400 与可读的业务提示
+- 书名为空时返回 400 与字段提示（参数校验）
+- 还书成功、重复还书返回 400
+- 统计概览字段齐全
+
+每次 push 会自动在 GitHub Actions 上执行 `mvn -B clean verify`（`.github/workflows/maven.yml`）。
 
 ## 项目结构
 
