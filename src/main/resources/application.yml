@@ -1,0 +1,46 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: library-management-system
+
+  # 默认使用 H2（MySQL 兼容模式）内存库，克隆下来直接跑，无需安装数据库
+  # 使用 MySQL：--spring.profiles.active=mysql（见 application-mysql.yml）
+  datasource:
+    url: jdbc:h2:mem:library;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema-h2.sql
+      data-locations: classpath:db/data.sql
+      encoding: UTF-8
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.xunhai.library.domain
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 借阅规则
+library:
+  borrow-days: 30          # 借期（天）
+  fine-per-day: 0.20       # 超期罚金（元/天）
+  max-page-size: 100       # 分页上限，防止一次拉全表
+
+logging:
+  level:
+    com.xunhai.library: info
