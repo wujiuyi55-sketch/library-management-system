@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>图书管理系统</title>
+    <style>
+        :root {
+            --primary: #2f6feb;
+            --primary-dark: #1f4e79;
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --danger: #d9463a;
+            --success: #16a34a;
+            --warn: #d97706;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1f4e79, #2f6feb);
+            color: #fff;
+            padding: 22px 32px;
+        }
+
+        header h1 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+        header p { margin: 6px 0 0; opacity: .85; font-size: 13px; }
+
+        .container { max-width: 1180px; margin: 0 auto; padding: 20px 24px 48px; }
+
+        .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 16px 18px;
+            box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+        }
+
+        .card .label { color: var(--muted); font-size: 12px; }
+        .card .value { font-size: 26px; font-weight: 700; margin-top: 6px; color: var(--primary-dark); }
+        .card .value.danger { color: var(--danger); }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+
+        .tab {
+            padding: 8px 18px;
+            border-radius: 8px 8px 0 0;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .tab.active { background: var(--card); color: var(--primary); font-weight: 600; box-shadow: 0 -1px 3px rgba(0,0,0,.06); }
+
+        .panel { background: var(--card); border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(16,24,40,.08); }
+        .panel.hidden { display: none; }
+
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+
+        input[type=text], select {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            background: #fff;
+        }
+
+        input[type=text]:focus, select:focus { border-color: var(--primary); }
+
+        button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--primary);
+            background: var(--primary);
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button.ghost { background: #fff; color: var(--primary); }
+        button.small { padding: 4px 10px; font-size: 12px; }
+        button.danger { background: #fff; color: var(--danger); border-color: #f0c2bd; }
+        button:hover { opacity: .92; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        th { color: var(--muted); font-weight: 600; background: #fafbfc; }
+
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .tag.borrowed { background: #e8f0fe; color: #1a56db; }
+        .tag.returned { background: #e7f6ec; color: var(--success); }
+        .tag.overdue { background: #fdecea; color: var(--danger); }
+
+        .pager { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 12px; color: var(--muted); }
+
+        .bar-row { display: grid; grid-template-columns: 180px 1fr 60px; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .bar { height: 10px; background: #e8eefb; border-radius: 6px; overflow: hidden; }
+        .bar span { display: block; height: 100%; background: linear-gradient(90deg, #6f9bf0, #2f6feb); }
+        .bar-value { text-align: right; color: var(--muted); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .section-title { font-weight: 700; margin: 0 0 12px; color: var(--primary-dark); }
+
+        .empty { color: var(--muted); text-align: center; padding: 26px 0; }
+
+        #toast {
+            position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+            background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 8px;
+            font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 80%;
+        }
+        #toast.show { opacity: .95; }
+        #toast.error { background: var(--danger); }
+
+        @media (max-width: 900px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>图书管理系统</h1>
+    <p>Spring Boot 2.7 + MyBatis + MySQL ｜ 图书检索 · 读者管理 · 借还书 · 超期与借阅统计</p>
+</header>
+
+<div class="container">
+    <div class="cards" id="cards">
+        <div class="card"><div class="label">图书种类</div><div class="value" id="c-book">-</div></div>
+        <div class="card"><div class="label">可借册数</div><div class="value" id="c-stock">-</div></div>
+        <div class="card"><div class="label">读者人数</div><div class="value" id="c-reader">-</div></div>
+        <div class="card"><div class="label">当前在借</div><div class="value" id="c-borrowing">-</div></div>
+        <div class="card"><div class="label">超期未还</div><div class="value danger" id="c-overdue">-</div></div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="books">图书检索</button>
+        <button class="tab" data-tab="records">借阅记录</button>
+        <button class="tab" data-tab="stats">数据看板</button>
+    </div>
+
+    <!-- 图书检索 -->
+    <section class="panel" id="panel-books">
+        <div class="toolbar">
+            <input type="text" id="book-keyword" placeholder="搜索书名 / 作者 / ISBN" style="width: 240px"/>
+            <select id="book-category"><option value="">全部分类</option></select>
+            <label style="color:#6b7280;font-size:13px">
+                <input type="checkbox" id="book-only-available"/> 只看有货
+            </label>
+            <button onclick="loadBooks(1)">搜索</button>
+            <span style="margin-left:auto;color:#6b7280;font-size:12px">点击「借书」后输入读者编号即可借出</span>
+        </div>
+        <table>
+            <thead>
+            <tr><th>ID</th><th>书名</th><th>作者</th><th>分类</th><th>可借/馆藏</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody id="book-body"></tbody>
+        </table>
+        <div class="pager">
+            <span id="book-total"></span>
+            <button class="ghost small" onclick="loadBooks(bookPage - 1)">上一页</button>
+            <button class="ghost small" onclick="loadBooks(bookPage + 1)">下一页</button>
+        </div>
+    </section>
+
+    <!-- 借阅记录 -->
+    <section class="panel hidden" id="panel-records">
+        <div class="toolbar">
+            <select id="record-status">
+                <option value="">全部状态</option>
+                <option value="BORROWED">在借</option>
+                <option value="OVERDUE">超期未还</option>
+                <option value="RETURNED">已归还</option>
+            </select>
+            <button onclick="loadRecords(1)">筛选</button>
+            <button class="ghost" onclick="refreshOverdue()">刷新超期状态</button>
+        </div>
+        <table>
+            <thead>
+            <tr><th>记录号</th><th>图书</th><th>读者</th><th>借出时间</th><th>应还时间</th><th>状态</th><th>超期/罚金</th><th>操作</th></tr>
+            </thead>
+            <tbody id="record-body"></tbody>
+        </table>
+        <div class="pager">
+            <span id="record-total"></span>
+            <button class="ghost small" onclick="loadRecords(recordPage - 1)">上一页</button>
+            <button class="ghost small" onclick="loadRecords(recordPage + 1)">下一页</button>
+        </div>
+    </section>
+
+    <!-- 数据看板 -->
+    <section class="panel hidden" id="panel-stats">
+        <div class="grid-2">
+            <div>
+                <h3 class="section-title">热门图书 TOP 5</h3>
+                <div id="hot-books"></div>
+            </div>
+            <div>
+                <h3 class="section-title">分类借阅分布</h3>
+                <div id="category-stats"></div>
+            </div>
+        </div>
+        <div style="margin-top:22px">
+            <h3 class="section-title">近 6 个月借阅量</h3>
+            <div id="monthly-stats"></div>
+        </div>
+        <div style="margin-top:22px">
+            <h3 class="section-title">超期未还明细</h3>
+            <table>
+                <thead>
+                <tr><th>记录号</th><th>图书</th><th>读者</th><th>应还时间</th><th>超期天数</th><th>应缴罚金</th></tr>
+                </thead>
+                <tbody id="overdue-body"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<div id="toast"></div>
+
+<script>
+    let bookPage = 1;
+    let recordPage = 1;
+    let categories = [];
+
+    function toast(message, isError) {
+        const el = document.getElementById('toast');
+        el.textContent = message;
+        el.className = 'show' + (isError ? ' error' : '');
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => el.className = '', 2600);
+    }
+
+    async function api(url, options) {
+        const response = await fetch(url, options);
+        const body = await response.json().catch(() => ({code: -1, message: '返回内容不是 JSON'}));
+        if (!response.ok || body.code !== 0) {
+            throw new Error(body.message || ('请求失败：' + response.status));
+        }
+        return body.data;
+    }
+
+    function esc(text) {
+        return String(text === null || text === undefined ? '' : text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function statusTag(status) {
+        if (status === 'BORROWED') return '<span class="tag borrowed">在借</span>';
+        if (status === 'OVERDUE') return '<span class="tag overdue">超期未还</span>';
+        return '<span class="tag returned">已归还</span>';
+    }
+
+    function timeShort(text) {
+        return text ? String(text).substring(0, 16) : '-';
+    }
+
+    /* ---------------- 概览 ---------------- */
+    async function loadOverview() {
+        try {
+            const data = await api('/api/stats/overview');
+            document.getElementById('c-book').textContent = data.bookCount;
+            document.getElementById('c-stock').textContent = data.availableStock;
+            document.getElementById('c-reader').textContent = data.readerCount;
+            document.getElementById('c-borrowing').textContent = data.borrowingCount;
+            document.getElementById('c-overdue').textContent = data.overdueCount;
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    /* ---------------- 图书 ---------------- */
+    async function loadCategories() {
+        categories = await api('/api/categories');
+        const select = document.getElementById('book-category');
+        select.innerHTML = '<option value="">全部分类</option>' +
+            categories.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    }
+
+    async function loadBooks(page) {
+        if (page < 1) return;
+        const keyword = document.getElementById('book-keyword').value.trim();
+        const categoryId = document.getElementById('book-category').value;
+        const onlyAvailable = document.getElementById('book-only-available').checked;
+        const params = new URLSearchParams({page: page, size: 8});
+        if (keyword) params.append('keyword', keyword);
+        if (categoryId) params.append('categoryId', categoryId);
+        if (onlyAvailable) params.append('onlyAvailable', true);
+
+        try {
+            const data = await api('/api/books?' + params.toString());
+            bookPage = data.page;
+            const body = document.getElementById('book-body');
+            document.getElementById('book-total').textContent = `共 ${data.total} 种`;
+            if (!data.list.length) {
+                body.innerHTML = '<tr><td colspan="7" class="empty">没有找到图书</td></tr>';
+                return;
+            }
+            body.innerHTML = data.list.map(b => `
+                <tr>
+                    <td>${b.id}</td>
+                    <td>${esc(b.title)}</td>
+                    <td>${esc(b.author)}</td>
+                    <td>${esc(b.categoryName || '-')}</td>
+                    <td>${b.availableStock} / ${b.totalStock}</td>
+                    <td>${b.status === 1 ? '<span class="tag returned">可借阅</span>' : '<span class="tag overdue">已下架</span>'}</td>
+                    <td><button class="small" ${b.availableStock > 0 && b.status === 1 ? '' : 'disabled'}
+                        onclick="borrowBook(${b.id}, '${esc(b.title).replace(/'/g, '')}')">借书</button></td>
+                </tr>`).join('');
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    async function borrowBook(bookId, title) {
+        const readerNo = prompt(`借阅《${title}》\n请输入读者编号（示例：R2026001）`);
+        if (!readerNo) return;
+        try {
+            const page = await api('/api/readers?keyword=' + encodeURIComponent(readerNo.trim()) + '&size=1');
+            const reader = page.list.find(r => r.readerNo === readerNo.trim());
+            if (!reader) {
+                toast('读者不存在：' + readerNo, true);
+                return;
+            }
+            const record = await api('/api/borrows', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({bookId: bookId, readerId: reader.id})
+            });
+            toast(`借阅成功，应还时间 ${timeShort(record.dueTime)}`);
+            loadBooks(bookPage);
+            loadOverview();
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    /* ---------------- 借阅记录 ---------------- */
+    async function loadRecords(page) {
+        if (page < 1) return;
+        const status = document.getElementById('record-status').value;
+        const params = new URLSearchParams({page: page, size: 8});
+        if (status) params.append('status', status);
+        try {
+            const data = await api('/api/borrows?' + params.toString());
+            recordPage = data.page;
+            document.getElementById('record-total').textContent = `共 ${data.total} 条`;
+            const body = document.getElementById('record-body');
+            if (!data.list.length) {
+                body.innerHTML = '<tr><td colspan="8" class="empty">暂无借阅记录</td></tr>';
+                return;
+            }
+            body.innerHTML = data.list.map(r => `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${esc(r.bookTitle)}</td>
+                    <td>${esc(r.readerName)}（${esc(r.readerNo)}）</td>
+                    <td>${timeShort(r.borrowTime)}</td>
+                    <td>${timeShort(r.dueTime)}</td>
+                    <td>${statusTag(r.status)}</td>
+                    <td>${r.overdueDays > 0 ? r.overdueDays + ' 天 / ￥' + r.fine : '-'}</td>
+                    <td>${r.status === 'RETURNED' ? '-' :
+                        `<button class="small ghost" onclick="returnBook(${r.id})">还书</button>`}</td>
+                </tr>`).join('');
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    async function returnBook(recordId) {
+        try {
+            const record = await api('/api/borrows/' + recordId + '/return', {method: 'POST'});
+            const fine = Number(record.fine) > 0 ? `，超期 ${record.overdueDays} 天，罚金 ￥${record.fine}` : '';
+            toast('归还成功' + fine);
+            loadRecords(recordPage);
+            loadBooks(bookPage);
+            loadOverview();
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    async function refreshOverdue() {
+        try {
+            const count = await api('/api/borrows/refresh-overdue', {method: 'POST'});
+            toast(`已刷新，更新 ${count} 条超期记录`);
+            loadRecords(recordPage);
+            loadOverview();
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    /* ---------------- 统计 ---------------- */
+    function renderBars(containerId, rows, labelKey, valueKey, suffix) {
+        const container = document.getElementById(containerId);
+        if (!rows.length) {
+            container.innerHTML = '<div class="empty">暂无数据</div>';
+            return;
+        }
+        const max = Math.max(...rows.map(r => r[valueKey]), 1);
+        container.innerHTML = rows.map(r => `
+            <div class="bar-row">
+                <div title="${esc(r[labelKey])}">${esc(r[labelKey])}</div>
+                <div class="bar"><span style="width:${Math.round(r[valueKey] / max * 100)}%"></span></div>
+                <div class="bar-value">${r[valueKey]}${suffix || ''}</div>
+            </div>`).join('');
+    }
+
+    async function loadStats() {
+        try {
+            const [hot, category, monthly, overdue] = await Promise.all([
+                api('/api/stats/hot-books?limit=5'),
+                api('/api/stats/categories'),
+                api('/api/stats/monthly?months=6'),
+                api('/api/stats/overdue?limit=20')
+            ]);
+            renderBars('hot-books', hot.map(h => ({name: h.title, count: h.borrowCount})), 'name', 'count', ' 次');
+            renderBars('category-stats', category.map(c => ({name: c.categoryName, count: c.borrowCount})), 'name', 'count', ' 次');
+            renderBars('monthly-stats', monthly.map(m => ({name: m.year + '-' + String(m.month).padStart(2, '0'), count: m.total})), 'name', 'count', ' 次');
+
+            const body = document.getElementById('overdue-body');
+            body.innerHTML = overdue.length ? overdue.map(o => `
+                <tr>
+                    <td>${o.recordId}</td>
+                    <td>${esc(o.bookTitle)}</td>
+                    <td>${esc(o.readerName)}（${esc(o.readerNo)}）</td>
+                    <td>${timeShort(o.dueTime)}</td>
+                    <td style="color:#d9463a">${o.overdueDays} 天</td>
+                    <td>￥${o.fine}</td>
+                </tr>`).join('') : '<tr><td colspan="6" class="empty">没有超期记录</td></tr>';
+        } catch (e) {
+            toast(e.message, true);
+        }
+    }
+
+    /* ---------------- 交互 ---------------- */
+    function activateTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        ['books', 'records', 'stats'].forEach(key => {
+            document.getElementById('panel-' + key).classList.toggle('hidden', key !== name);
+        });
+        if (name === 'stats') loadStats();
+        if (name === 'records') loadRecords(1);
+        if (name === 'books') loadBooks(1);
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const name = tab.dataset.tab;
+            history.replaceState(null, '', '#' + name);
+            activateTab(name);
+        });
+    });
+
+    document.getElementById('book-keyword').addEventListener('keydown', e => {
+        if (e.key === 'Enter') loadBooks(1);
+    });
+
+    loadCategories().catch(e => toast(e.message, true));
+    loadOverview();
+
+    const initialTab = (location.hash || '#books').substring(1);
+    activateTab(['books', 'records', 'stats'].includes(initialTab) ? initialTab : 'books');
+</script>
+</body>
+</html>
