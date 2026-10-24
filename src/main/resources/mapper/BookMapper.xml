@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xunhai.library.mapper.BookMapper">
+
+    <sql id="Base_Column_List">
+        b.id, b.isbn, b.title, b.author, b.publisher, b.category_id, b.total_stock,
+        b.available_stock, b.status, b.create_time, b.update_time,
+        c.name AS category_name
+    </sql>
+
+    <!-- 检索条件：关键字（书名/作者/ISBN）、分类、是否有货 -->
+    <sql id="Search_Where">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    b.title LIKE CONCAT('%', #{keyword}, '%')
+                    OR b.author LIKE CONCAT('%', #{keyword}, '%')
+                    OR b.isbn LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="categoryId != null">
+                AND b.category_id = #{categoryId}
+            </if>
+            <if test="onlyAvailable != null and onlyAvailable">
+                AND b.available_stock &gt; 0
+            </if>
+        </where>
+    </sql>
+
+    <select id="findById" resultType="com.xunhai.library.domain.Book">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM book b
+        LEFT JOIN category c ON b.category_id = c.id
+        WHERE b.id = #{id}
+    </select>
+
+    <select id="search" resultType="com.xunhai.library.domain.Book">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM book b
+        LEFT JOIN category c ON b.category_id = c.id
+        <include refid="Search_Where"/>
+        ORDER BY b.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM book b
+        <include refid="Search_Where"/>
+    </select>
+
+</mapper>

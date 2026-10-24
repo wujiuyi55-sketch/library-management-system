@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xunhai.library.mapper.StatsMapper">
+
+    <resultMap id="MonthlyMap" type="com.xunhai.library.vo.MonthlyStatVO">
+        <result column="stat_year" property="year"/>
+        <result column="stat_month" property="month"/>
+        <result column="total" property="total"/>
+    </resultMap>
+
+    <select id="countBooks" resultType="long">
+        SELECT COUNT(*) FROM book
+    </select>
+
+    <select id="sumAvailableStock" resultType="long">
+        SELECT COALESCE(SUM(available_stock), 0) FROM book
+    </select>
+
+    <select id="countReaders" resultType="long">
+        SELECT COUNT(*) FROM reader
+    </select>
+
+    <select id="countBorrowing" resultType="long">
+        SELECT COUNT(*) FROM borrow_record WHERE status IN ('BORROWED', 'OVERDUE')
+    </select>
+
+    <select id="countOverdue" resultType="long">
+        SELECT COUNT(*) FROM borrow_record
+        WHERE status IN ('BORROWED', 'OVERDUE')
+          AND due_time &lt; #{now}
+    </select>
+
+    <!-- 热门图书：按借阅次数倒序 -->
+    <select id="topBooks" resultType="com.xunhai.library.vo.HotBookVO">
+        SELECT b.id AS book_id, b.title, b.author, COUNT(r.id) AS borrow_count
+        FROM borrow_record r
+                 JOIN book b ON r.book_id = b.id
+        GROUP BY b.id, b.title, b.author
+        ORDER BY borrow_count DESC, b.id ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 分类借阅分布：分类 LEFT JOIN 图书 LEFT JOIN 借阅，没被借过的分类也显示 0 -->
+    <select id="categoryStats" resultType="com.xunhai.library.vo.CategoryStatVO">
+        SELECT c.name AS category_name, COUNT(r.id) AS borrow_count
+        FROM category c
+                 LEFT JOIN book b ON b.category_id = c.id
+                 LEFT JOIN borrow_record r ON r.book_id = b.id
+        GROUP BY c.id, c.name
+        ORDER BY borrow_count DESC, c.id ASC
+    </select>
+
+    <!-- 月度借阅量：EXTRACT 是标准 SQL，MySQL 与 H2 都支持 -->
+    <select id="monthlyStats" resultMap="MonthlyMap">
+        SELECT EXTRACT(YEAR FROM r.borrow_time)  AS stat_year,
+               EXTRACT(MONTH FROM r.borrow_time) AS stat_month,
+               COUNT(*)                          AS total
+        FROM borrow_record r
+        WHERE r.borrow_time &gt;= #{start}
+        GROUP BY EXTRACT(YEAR FROM r.borrow_time), EXTRACT(MONTH FROM r.borrow_time)
+        ORDER BY stat_year ASC, stat_month ASC
+    </select>
+
+    <!-- 超期未还明细：天数与罚金在 Service 层按当前时间计算 -->
+    <select id="overdueList" resultType="com.xunhai.library.vo.OverdueVO">
+        SELECT r.id        AS record_id,
+               b.title     AS book_title,
+               rd.name     AS reader_name,
+               rd.reader_no,
+               r.due_time
+        FROM borrow_record r
+                 JOIN book b ON r.book_id = b.id
+                 JOIN reader rd ON r.reader_id = rd.id
+        WHERE r.status IN ('BORROWED', 'OVERDUE')
+          AND r.due_time &lt; #{now}
+        ORDER BY r.due_time ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

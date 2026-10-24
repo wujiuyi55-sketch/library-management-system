@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xunhai.library.mapper.ReaderMapper">
+
+    <sql id="Search_Where">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    r.name LIKE CONCAT('%', #{keyword}, '%')
+                    OR r.reader_no LIKE CONCAT('%', #{keyword}, '%')
+                    OR r.phone LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="search" resultType="com.xunhai.library.domain.Reader">
+        SELECT r.id, r.reader_no, r.name, r.phone, r.type, r.status, r.max_borrow, r.create_time
+        FROM reader r
+        <include refid="Search_Where"/>
+        ORDER BY r.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM reader r
+        <include refid="Search_Where"/>
+    </select>
+
+</mapper>

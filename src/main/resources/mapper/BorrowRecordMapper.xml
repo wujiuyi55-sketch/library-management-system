@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xunhai.library.mapper.BorrowRecordMapper">
+
+    <sql id="Record_Columns">
+        r.id, r.book_id, r.reader_id, r.borrow_time, r.due_time, r.return_time,
+        r.status, r.overdue_days, r.fine, r.create_time,
+        b.title AS book_title, rd.name AS reader_name, rd.reader_no
+    </sql>
+
+    <sql id="Record_From">
+        FROM borrow_record r
+        JOIN book b ON r.book_id = b.id
+        JOIN reader rd ON r.reader_id = rd.id
+    </sql>
+
+    <sql id="Search_Where">
+        <where>
+            <if test="status != null and status != ''">
+                AND r.status = #{status}
+            </if>
+            <if test="readerId != null">
+                AND r.reader_id = #{readerId}
+            </if>
+            <if test="bookId != null">
+                AND r.book_id = #{bookId}
+            </if>
+        </where>
+    </sql>
+
+    <select id="findById" resultType="com.xunhai.library.domain.BorrowRecord">
+        SELECT
+        <include refid="Record_Columns"/>
+        <include refid="Record_From"/>
+        WHERE r.id = #{id}
+    </select>
+
+    <select id="search" resultType="com.xunhai.library.domain.BorrowRecord">
+        SELECT
+        <include refid="Record_Columns"/>
+        <include refid="Record_From"/>
+        <include refid="Search_Where"/>
+        ORDER BY r.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM borrow_record r
+        <include refid="Search_Where"/>
+    </select>
+
+    <!-- 定时任务：所有已过应还时间且未归还的记录 -->
+    <select id="findDueBefore" resultType="com.xunhai.library.domain.BorrowRecord">
+        SELECT r.id, r.book_id, r.reader_id, r.due_time, r.status
+        FROM borrow_record r
+        WHERE r.status IN ('BORROWED', 'OVERDUE')
+          AND r.due_time &lt; #{now}
+    </select>
+
+</mapper>
